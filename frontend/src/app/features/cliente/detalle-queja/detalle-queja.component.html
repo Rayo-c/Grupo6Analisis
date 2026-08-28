@@ -1,0 +1,125 @@
+<div class="contenedor">
+  @if (cargando) { <p>Cargando...</p> }
+  @if (errorMsg && !queja) { <p class="error">{{ errorMsg }}</p> }
+
+  @if (queja) {
+    <div class="tarjeta">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Queja {{ queja.numeroSeguimiento }}</h2>
+        <span class="badge" [ngClass]="queja.estado">{{ queja.estado }}</span>
+      </div>
+
+      @if (mensajeExito) { <p class="exito">{{ mensajeExito }}</p> }
+      @if (errorMsg) { <p class="error">{{ errorMsg }}</p> }
+
+      <p><strong>Cliente:</strong> {{ queja.clienteNombre }} ({{ queja.clienteCorreo }}) @if (queja.esInvitado) { <em>(invitado)</em> }</p>
+      <p><strong>Sucursal:</strong> {{ queja.sucursalNombre }} &nbsp; <strong>Categoria:</strong> {{ queja.categoriaNombre }}</p>
+      <p><strong>Fecha del incidente:</strong> {{ queja.fechaHoraIncidente | date:'medium' }}</p>
+      <p><strong>Descripcion:</strong> {{ queja.descripcion }}</p>
+      @if (queja.evidenciaUrl) { <p><strong>Evidencia:</strong> <a [href]="queja.evidenciaUrl" target="_blank">Ver archivo adjunto</a></p> }
+      <p><strong>Agente asignado:</strong> {{ queja.agenteAsignadoNombre || 'Pendiente de asignacion' }}</p>
+
+      @if (queja.solucion) {
+        <hr style="border-color: var(--color-borde);">
+        <p><strong>Solucion otorgada:</strong> {{ queja.solucion }} ({{ queja.tipoResolucion }})</p>
+      }
+      @if (queja.motivoEscalamiento) {
+        <p><strong>Motivo de escalamiento:</strong> {{ queja.motivoEscalamiento }} - Nivel: {{ queja.nivelEscalamiento }}</p>
+      }
+    </div>
+
+    <!-- Historial de seguimiento (CU10) -->
+    <div class="tarjeta">
+      <h3>Historial de Seguimiento</h3>
+      @if (queja.historial.length === 0) { <p>Sin seguimientos registrados aun.</p> }
+      @for (h of queja.historial; track h.id) {
+        <div style="padding: 8px 0; border-bottom: 1px solid var(--color-borde);">
+          <p style="margin:0; font-size:13px; color:#666;">{{ h.usuarioNombre }} - {{ h.fecha | date:'short' }}</p>
+          <p style="margin:4px 0 0;">{{ h.comentario }}</p>
+        </div>
+      }
+    </div>
+
+    <!-- Calificaciones (CU14) -->
+    @if (queja.calificaciones.length > 0) {
+      <div class="tarjeta">
+        <h3>Calificaciones</h3>
+        @for (c of queja.calificaciones; track c.numeroResolucion) {
+          <p>Resolucion #{{ c.numeroResolucion }}: {{ c.calificacion }}/5 @if (c.comentario) { - "{{ c.comentario }}" }</p>
+        }
+      </div>
+    }
+
+    <!-- Acciones disponibles segun rol y estado -->
+    <div class="tarjeta">
+      <h3>Acciones</h3>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        @if (puedeDarSeguimiento) { <button (click)="togglePanel('seguimiento')">Dar Seguimiento</button> }
+        @if (puedeResolver) { <button (click)="togglePanel('resolver')">Resolver</button> }
+        @if (puedeEscalar) { <button class="secundario" (click)="togglePanel('escalar')">Escalar</button> }
+        @if (puedeReabrir) { <button class="peligro" (click)="togglePanel('reabrir')">Reabrir Queja</button> }
+        @if (puedeCalificar) { <button (click)="togglePanel('calificar')">Calificar Atencion</button> }
+        @if (!puedeDarSeguimiento && !puedeResolver && !puedeEscalar && !puedeReabrir && !puedeCalificar) {
+          <p style="color:#666;">No hay acciones disponibles para este estado.</p>
+        }
+      </div>
+
+      <!-- CU10 -->
+      @if (panelActivo === 'seguimiento') {
+        <form [formGroup]="formSeguimiento" (ngSubmit)="enviarSeguimiento()" style="margin-top:16px;">
+          <label>Comentario / Accion Realizada</label>
+          <textarea formControlName="comentario" rows="3"></textarea>
+          <label>Evidencia (URL) - opcional</label>
+          <input formControlName="evidenciaUrl">
+          <button type="submit" [disabled]="formSeguimiento.invalid">Guardar Seguimiento</button>
+        </form>
+      }
+
+      <!-- CU11 -->
+      @if (panelActivo === 'resolver') {
+        <form [formGroup]="formResolver" (ngSubmit)="enviarResolucion()" style="margin-top:16px;">
+          <label>Solucion / Respuesta Otorgada al Cliente</label>
+          <textarea formControlName="solucion" rows="3"></textarea>
+          <label>Tipo de Resolucion</label>
+          <select formControlName="tipoResolucion">
+            @for (t of tiposResolucion; track t) { <option [value]="t">{{ t }}</option> }
+          </select>
+          <button type="submit" [disabled]="formResolver.invalid">Confirmar Resolucion</button>
+        </form>
+      }
+
+      <!-- CU12 -->
+      @if (panelActivo === 'escalar') {
+        <form [formGroup]="formEscalar" (ngSubmit)="enviarEscalamiento()" style="margin-top:16px;">
+          <label>Motivo de Escalamiento</label>
+          <textarea formControlName="motivo" rows="3"></textarea>
+          <label>Nivel de Escalamiento</label>
+          <select formControlName="nivel">
+            @for (n of nivelesEscalamiento; track n) { <option [value]="n">{{ n }}</option> }
+          </select>
+          <button type="submit" class="secundario" [disabled]="formEscalar.invalid">Confirmar Escalamiento</button>
+        </form>
+      }
+
+      <!-- CU13 -->
+      @if (panelActivo === 'reabrir') {
+        <form [formGroup]="formReabrir" (ngSubmit)="enviarReapertura()" style="margin-top:16px;">
+          <label>Motivo de Reapertura</label>
+          <textarea formControlName="motivo" rows="3"></textarea>
+          <button type="submit" class="peligro" [disabled]="formReabrir.invalid">Confirmar Reapertura</button>
+        </form>
+      }
+
+      <!-- CU14 -->
+      @if (panelActivo === 'calificar') {
+        <div style="margin-top:16px;">
+          <label>Calificacion</label>
+          <app-star-rating [(valor)]="calificacionSeleccionada"></app-star-rating>
+          <label style="margin-top:12px;">Comentario adicional (opcional)</label>
+          <textarea [(ngModel)]="comentarioCalificacion" rows="3"></textarea>
+          <button (click)="enviarCalificacion()">Enviar Calificacion</button>
+        </div>
+      }
+    </div>
+  }
+</div>

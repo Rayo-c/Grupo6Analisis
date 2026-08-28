@@ -1,0 +1,30 @@
+<div class="contenedor">
+  <div class="tarjeta" style="text-align:center; background: var(--color-secundario); color:#fff;">
+    <h1>Tu opinion nos ayuda a mejorar</h1>
+    <p>Registra tu queja, dale seguimiento y conoce como la resolvemos.</p>
+    <a routerLink="/registrar-queja" class="boton" style="display:inline-block; margin-top: 10px;">Registrar una Queja</a>
+  </div>
+
+  @if (info) {
+    <div class="tarjeta">
+      <h2>Mision</h2>
+      <p>{{ info.mision }}</p>
+    </div>
+    <div class="tarjeta">
+      <h2>Vision</h2>
+      <p>{{ info.vision }}</p>
+    </div>
+    <div class="tarjeta">
+      <h2>Valores</h2>
+      <p>{{ info.valores }}</p>
+    </div>
+  }
+
+  <div class="tarjeta">
+    <h2>&#191;Ya tienes una queja registrada?</h2>
+    <p>Inicia sesion para ver el estado y el historial de tus quejas, o crea una cuenta para llevar un mejor seguimiento.</p>
+    <a routerLink="/login" class="boton">Iniciar Sesion</a>
+    &nbsp;
+    <a routerLink="/registro" class="boton secundario">Crear Cuenta</a>
+  </div>
+</div>

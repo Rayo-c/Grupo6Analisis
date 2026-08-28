@@ -1,0 +1,25 @@
+<div class="contenedor" style="max-width: 420px;">
+  <div class="tarjeta">
+    <h2>Iniciar Sesion</h2>
+    <form [formGroup]="form" (ngSubmit)="enviar()">
+      <label>Correo Electronico</label>
+      <input type="email" formControlName="correo" placeholder="tucorreo@ejemplo.com">
+
+      <label>Contrasena</label>
+      <input type="password" formControlName="password">
+
+      @if (errorMsg) { <p class="error">{{ errorMsg }}</p> }
+
+      <button type="submit" [disabled]="form.invalid || cargando">
+        {{ cargando ? 'Ingresando...' : 'Iniciar Sesion' }}
+      </button>
+    </form>
+
+    <p style="margin-top:16px; font-size:13px;">
+      <a routerLink="/recuperar-password">&#191;Olvidaste tu contrasena?</a>
+    </p>
+    <p style="font-size:13px;">
+      &#191;No tienes cuenta? <a routerLink="/registro">Crear Cuenta</a>
+    </p>
+  </div>
+</div>

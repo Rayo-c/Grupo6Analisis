@@ -1,0 +1,52 @@
+<div class="contenedor">
+  <div class="tarjeta">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>Sucursales</h2>
+      <button (click)="abrirCrear()">Crear Sucursal</button>
+    </div>
+
+    @if (errorMsg) { <p class="error">{{ errorMsg }}</p> }
+    @if (mensajeExito) { <p class="exito">{{ mensajeExito }}</p> }
+
+    @if (mostrarFormulario) {
+      <form [formGroup]="form" (ngSubmit)="guardar()" class="tarjeta" style="background:#fafafa;">
+        <label>Codigo</label>
+        <input formControlName="codigo">
+        <label>Nombre</label>
+        <input formControlName="nombre">
+        <label>Direccion</label>
+        <input formControlName="direccion">
+        <label>Telefono</label>
+        <input formControlName="telefono">
+        <label>Supervisor Asignado</label>
+        <select formControlName="supervisorId">
+          <option [ngValue]="null">Sin asignar</option>
+          @for (s of supervisores; track s.id) { <option [ngValue]="s.id">{{ s.nombreCompleto }}</option> }
+        </select>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" [disabled]="form.invalid">Guardar</button>
+          <button type="button" class="secundario" (click)="mostrarFormulario = false">Cancelar</button>
+        </div>
+      </form>
+    }
+
+    <table>
+      <thead><tr><th>Codigo</th><th>Nombre</th><th>Direccion</th><th>Supervisor</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        @for (s of sucursales; track s.id) {
+          <tr>
+            <td>{{ s.codigo }}</td>
+            <td>{{ s.nombre }}</td>
+            <td>{{ s.direccion }}</td>
+            <td>{{ s.supervisorNombre || '-' }}</td>
+            <td><span class="badge" [ngClass]="s.estado === 'ACTIVO' ? 'RESUELTA' : 'CERRADA'">{{ s.estado }}</span></td>
+            <td>
+              <a href="javascript:void(0)" (click)="abrirEditar(s)">Editar</a> &nbsp;
+              <a href="javascript:void(0)" (click)="cambiarEstado(s)">Cambiar Estado</a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

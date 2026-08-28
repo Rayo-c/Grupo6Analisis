@@ -1,0 +1,74 @@
+<div class="contenedor">
+  <div class="tarjeta">
+    <h2>Reportes de Quejas</h2>
+    <form [formGroup]="filtros" (ngSubmit)="generar()" style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 0 16px;">
+      <div><label>Desde</label><input type="date" formControlName="desde"></div>
+      <div><label>Hasta</label><input type="date" formControlName="hasta"></div>
+      <div>
+        <label>Sucursal</label>
+        <select formControlName="sucursalId">
+          <option [ngValue]="null">Todas</option>
+          @for (s of sucursales; track s.id) { <option [ngValue]="s.id">{{ s.nombre }}</option> }
+        </select>
+      </div>
+      <div>
+        <label>Categoria</label>
+        <select formControlName="categoriaId">
+          <option [ngValue]="null">Todas</option>
+          @for (c of categorias; track c.id) { <option [ngValue]="c.id">{{ c.nombre }}</option> }
+        </select>
+      </div>
+      <div style="grid-column: 1 / -1;">
+        <button type="submit" [disabled]="cargando">{{ cargando ? 'Generando...' : 'Generar Reporte' }}</button>
+      </div>
+    </form>
+  </div>
+
+  @if (errorMsg) { <div class="tarjeta"><p class="error">{{ errorMsg }}</p></div> }
+
+  @if (reporte) {
+    <div class="tarjeta">
+      <h3>Resumen</h3>
+      <p><strong>Total de quejas:</strong> {{ reporte.totalQuejas }}</p>
+      <p><strong>Tiempo promedio de resolucion:</strong> {{ reporte.tiempoPromedioResolucionHoras | number:'1.1-1' }} horas</p>
+      <p><strong>Indice de satisfaccion promedio:</strong> {{ reporte.indiceSatisfaccionPromedio | number:'1.1-1' }} / 5</p>
+    </div>
+
+    <div class="tarjeta">
+      <h3>Quejas por Categoria</h3>
+      @for (item of reporte.porCategoria | keyvalue; track item.key) {
+        <p>{{ item.key }}: {{ item.value }}</p>
+      }
+    </div>
+
+    <div class="tarjeta">
+      <h3>Quejas por Sucursal</h3>
+      @for (item of reporte.porSucursal | keyvalue; track item.key) {
+        <p>{{ item.key }}: {{ item.value }}</p>
+      }
+    </div>
+
+    <div class="tarjeta">
+      <h3>Quejas por Estado</h3>
+      @for (item of reporte.porEstado | keyvalue; track item.key) {
+        <p><span class="badge" [ngClass]="item.key">{{ item.key }}</span>: {{ item.value }}</p>
+      }
+    </div>
+
+    <div class="tarjeta">
+      <h3>Desempeno por Agente</h3>
+      <table>
+        <thead><tr><th>Agente</th><th>Quejas Atendidas</th><th>Calificacion Promedio</th></tr></thead>
+        <tbody>
+          @for (a of reporte.desempenoPorAgente; track a.agenteNombre) {
+            <tr>
+              <td>{{ a.agenteNombre }}</td>
+              <td>{{ a.quejasAtendidas }}</td>
+              <td>{{ a.calificacionPromedio | number:'1.1-1' }} / 5</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

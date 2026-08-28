@@ -1,0 +1,50 @@
+<div class="contenedor">
+  <div class="tarjeta">
+    <h2>Cuentas de Cliente</h2>
+    <p style="font-size:13px; color:#666;">
+      Consulta unicamente. Estas cuentas se crean por autorregistro (CU Registrar Cliente);
+      aqui solo puedes suspenderlas o reactivarlas por moderacion.
+    </p>
+
+    <div style="display:flex; gap:10px; margin: 12px 0;">
+      <input placeholder="Buscar por nombre o correo" [(ngModel)]="filtroTexto" (keyup.enter)="buscar()">
+      <select [(ngModel)]="filtroEstado" (change)="buscar()">
+        <option value="">Todos los estados</option>
+        <option value="ACTIVO">Activo</option>
+        <option value="SUSPENDIDO">Suspendido</option>
+        <option value="PENDIENTE_VERIFICACION">Pendiente de Verificacion</option>
+      </select>
+      <button (click)="buscar()">Buscar</button>
+    </div>
+
+    @if (errorMsg) { <p class="error">{{ errorMsg }}</p> }
+    @if (mensajeExito) { <p class="exito">{{ mensajeExito }}</p> }
+
+    @if (clienteParaSuspender) {
+      <div class="tarjeta" style="background:#fafafa;">
+        <p>Cambiar estado de: <strong>{{ clienteParaSuspender.nombreCompleto }}</strong></p>
+        <label>Motivo (obligatorio)</label>
+        <textarea [(ngModel)]="motivoSuspension" rows="2"></textarea>
+        <div style="display:flex; gap:10px;">
+          <button (click)="confirmarCambioEstado()">Confirmar</button>
+          <button type="button" class="secundario" (click)="clienteParaSuspender = null">Cancelar</button>
+        </div>
+      </div>
+    }
+
+    <table>
+      <thead><tr><th>Nombre</th><th>Correo</th><th>Fecha de Registro</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        @for (c of clientes; track c.id) {
+          <tr>
+            <td>{{ c.nombreCompleto }}</td>
+            <td>{{ c.correo }}</td>
+            <td>{{ c.fechaCreacion | date:'short' }}</td>
+            <td><span class="badge" [ngClass]="c.estado === 'ACTIVO' ? 'RESUELTA' : 'CERRADA'">{{ c.estado }}</span></td>
+            <td><a href="javascript:void(0)" (click)="abrirCambioEstado(c)">Cambiar Estado</a></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

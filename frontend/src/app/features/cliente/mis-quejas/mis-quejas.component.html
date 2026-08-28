@@ -1,0 +1,35 @@
+<div class="contenedor">
+  <div class="tarjeta">
+    <h2>Mis Quejas</h2>
+
+    @if (cargando) { <p>Cargando...</p> }
+    @if (errorMsg) { <p class="error">{{ errorMsg }}</p> }
+
+    @if (!cargando && quejas.length === 0 && !errorMsg) {
+      <p>No has registrado quejas aun.</p>
+    }
+
+    @if (quejas.length > 0) {
+      <table>
+        <thead>
+          <tr>
+            <th>No. Seguimiento</th><th>Sucursal</th><th>Categoria</th>
+            <th>Estado</th><th>Fecha</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (q of quejas; track q.id) {
+            <tr>
+              <td>{{ q.numeroSeguimiento }}</td>
+              <td>{{ q.sucursalNombre }}</td>
+              <td>{{ q.categoriaNombre }}</td>
+              <td><span class="badge" [ngClass]="q.estado">{{ q.estado }}</span></td>
+              <td>{{ q.fechaRegistro | date:'short' }}</td>
+              <td><a [routerLink]="['/quejas', q.id]">Ver Detalle</a></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>

@@ -1,0 +1,44 @@
+<div class="contenedor">
+  <div class="tarjeta">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>Categorias de Queja</h2>
+      <button (click)="abrirCrear()">Crear Categoria</button>
+    </div>
+
+    @if (errorMsg) { <p class="error">{{ errorMsg }}</p> }
+    @if (mensajeExito) { <p class="exito">{{ mensajeExito }}</p> }
+
+    @if (mostrarFormulario) {
+      <form [formGroup]="form" (ngSubmit)="guardar()" class="tarjeta" style="background:#fafafa;">
+        <label>Nombre</label>
+        <input formControlName="nombre">
+        <label>Descripcion</label>
+        <textarea formControlName="descripcion" rows="2"></textarea>
+        <label>Tiempo Maximo de Respuesta - SLA (horas)</label>
+        <input type="number" formControlName="slaHoras">
+        <div style="display:flex; gap:10px;">
+          <button type="submit" [disabled]="form.invalid">Guardar</button>
+          <button type="button" class="secundario" (click)="mostrarFormulario = false">Cancelar</button>
+        </div>
+      </form>
+    }
+
+    <table>
+      <thead><tr><th>Nombre</th><th>Descripcion</th><th>SLA (horas)</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        @for (c of categorias; track c.id) {
+          <tr>
+            <td>{{ c.nombre }}</td>
+            <td>{{ c.descripcion }}</td>
+            <td>{{ c.slaHoras }}</td>
+            <td><span class="badge" [ngClass]="c.estado === 'ACTIVO' ? 'RESUELTA' : 'CERRADA'">{{ c.estado }}</span></td>
+            <td>
+              <a href="javascript:void(0)" (click)="abrirEditar(c)">Editar</a> &nbsp;
+              <a href="javascript:void(0)" (click)="cambiarEstado(c)">Cambiar Estado</a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,60 @@
+<div class="contenedor" style="max-width: 560px;">
+  <div class="tarjeta">
+    <h2>Registrar Queja</h2>
+
+    @if (numeroSeguimiento) {
+      <p class="exito">
+        &#161;Tu queja fue registrada! Numero de seguimiento: <strong>{{ numeroSeguimiento }}</strong>
+      </p>
+      <p style="font-size:13px;">Guarda este numero para dar seguimiento a tu queja.</p>
+      <a routerLink="/" class="boton">Volver al Inicio</a>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="enviar()">
+        <label>Sucursal</label>
+        <select formControlName="sucursalId">
+          <option [ngValue]="null">Selecciona una sucursal</option>
+          @for (s of sucursales; track s.id) {
+            <option [ngValue]="s.id">{{ s.nombre }}</option>
+          }
+        </select>
+
+        <label>Categoria de Queja</label>
+        <select formControlName="categoriaId">
+          <option [ngValue]="null">Selecciona una categoria</option>
+          @for (c of categorias; track c.id) {
+            <option [ngValue]="c.id">{{ c.nombre }}</option>
+          }
+        </select>
+
+        <label>Fecha y Hora del Incidente</label>
+        <input type="datetime-local" formControlName="fechaHoraIncidente">
+
+        <label>Descripcion de la Queja</label>
+        <textarea formControlName="descripcion" rows="4"></textarea>
+
+        <label>Evidencia (URL de foto o recibo) - opcional</label>
+        <input formControlName="evidenciaUrl" placeholder="https://...">
+
+        @if (!authService.estaAutenticado()) {
+          <hr style="margin: 16px 0; border-color: var(--color-borde);">
+          <p style="font-size:13px; color:#666;">No tienes sesion iniciada. Completa tus datos de contacto:</p>
+
+          <label>Nombre Completo</label>
+          <input formControlName="invitadoNombre">
+
+          <label>Correo Electronico</label>
+          <input type="email" formControlName="invitadoCorreo">
+
+          <label>Telefono (opcional)</label>
+          <input formControlName="invitadoTelefono">
+        }
+
+        @if (errorMsg) { <p class="error">{{ errorMsg }}</p> }
+
+        <button type="submit" [disabled]="form.invalid || cargando">
+          {{ cargando ? 'Enviando...' : 'Enviar Queja' }}
+        </button>
+      </form>
+    }
+  </div>
+</div>

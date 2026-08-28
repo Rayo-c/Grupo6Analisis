@@ -1,0 +1,36 @@
+<nav class="navbar">
+  <a routerLink="/" class="marca">QuickBite <span>Quejas</span></a>
+
+  <div class="enlaces">
+    @if (!authService.estaAutenticado()) {
+      <a routerLink="/login">Iniciar Sesion</a>
+      <a routerLink="/registro">Crear Cuenta</a>
+      <a routerLink="/registrar-queja">Registrar Queja</a>
+    }
+
+    @if (authService.tieneRol('ROLE_CLIENTE')) {
+      <a routerLink="/mis-quejas">Mis Quejas</a>
+      <a routerLink="/registrar-queja">Nueva Queja</a>
+    }
+
+    @if (authService.tieneRol('ROLE_AGENTE', 'ROLE_SUPERVISOR')) {
+      <a routerLink="/bandeja-quejas">Bandeja de Quejas</a>
+    }
+
+    @if (authService.tieneRol('ROLE_SUPERVISOR', 'ROLE_ADMIN')) {
+      <a routerLink="/reportes">Reportes</a>
+    }
+
+    @if (authService.tieneRol('ROLE_ADMIN')) {
+      <a routerLink="/admin/cuentas-personal">Personal</a>
+      <a routerLink="/admin/cuentas-clientes">Clientes</a>
+      <a routerLink="/admin/sucursales">Sucursales</a>
+      <a routerLink="/admin/categorias">Categorias</a>
+    }
+
+    @if (authService.estaAutenticado()) {
+      <span class="usuario">{{ authService.usuario()?.nombreCompleto }}</span>
+      <button (click)="cerrarSesion()">Cerrar Sesion</button>
+    }
+  </div>
+</nav>

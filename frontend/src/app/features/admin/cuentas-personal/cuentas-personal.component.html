@@ -1,0 +1,74 @@
+<div class="contenedor">
+  <div class="tarjeta">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>Cuentas de Personal</h2>
+      <button (click)="abrirCrear()">Crear Cuenta de Personal</button>
+    </div>
+    <p style="font-size:13px; color:#666;">
+      Solo personal interno (Agente, Supervisor, Administrador). Las cuentas de Cliente se crean
+      por autorregistro; adminístralas en la pestaña "Clientes".
+    </p>
+
+    <div style="display:flex; gap:10px; margin: 12px 0;">
+      <input placeholder="Buscar por nombre o correo" [(ngModel)]="filtroTexto" (keyup.enter)="buscar()">
+      <select [(ngModel)]="filtroRol" (change)="buscar()">
+        <option value="">Todos los roles</option>
+        <option value="ROLE_AGENTE">Agente</option>
+        <option value="ROLE_SUPERVISOR">Supervisor</option>
+        <option value="ROLE_ADMIN">Administrador</option>
+      </select>
+      <select [(ngModel)]="filtroEstado" (change)="buscar()">
+        <option value="">Todos los estados</option>
+        <option value="ACTIVO">Activo</option>
+        <option value="INACTIVO">Inactivo</option>
+      </select>
+      <button (click)="buscar()">Buscar</button>
+    </div>
+
+    @if (errorMsg) { <p class="error">{{ errorMsg }}</p> }
+    @if (mensajeExito) { <p class="exito">{{ mensajeExito }}</p> }
+
+    @if (mostrarFormulario) {
+      <form [formGroup]="form" (ngSubmit)="guardar()" class="tarjeta" style="background:#fafafa;">
+        <label>Nombre Completo</label>
+        <input formControlName="nombreCompleto">
+        <label>Correo Electronico</label>
+        <input type="email" formControlName="correo">
+        <label>Rol</label>
+        <select formControlName="rol">
+          @for (r of roles; track r) { <option [value]="r">{{ r }}</option> }
+        </select>
+        <label>Sucursal Asignada</label>
+        <select formControlName="sucursalId">
+          <option [ngValue]="null">Sin sucursal (Administrador)</option>
+          @for (s of sucursales; track s.id) { <option [ngValue]="s.id">{{ s.nombre }}</option> }
+        </select>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" [disabled]="form.invalid">Guardar</button>
+          <button type="button" class="secundario" (click)="mostrarFormulario = false">Cancelar</button>
+        </div>
+      </form>
+    }
+
+    <table>
+      <thead>
+        <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Sucursal</th><th>Estado</th><th></th></tr>
+      </thead>
+      <tbody>
+        @for (u of personal; track u.id) {
+          <tr>
+            <td>{{ u.nombreCompleto }}</td>
+            <td>{{ u.correo }}</td>
+            <td>{{ u.rol }}</td>
+            <td>{{ u.sucursalNombre || '-' }}</td>
+            <td><span class="badge" [ngClass]="u.estado === 'ACTIVO' ? 'RESUELTA' : 'CERRADA'">{{ u.estado }}</span></td>
+            <td>
+              <a href="javascript:void(0)" (click)="abrirEditar(u)">Editar</a> &nbsp;
+              <a href="javascript:void(0)" (click)="cambiarEstado(u)">Cambiar Estado</a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
