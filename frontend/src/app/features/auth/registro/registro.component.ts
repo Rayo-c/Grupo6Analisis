@@ -13,11 +13,12 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class RegistroComponent {
   private readonly patronPassword = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+  private readonly patronTelefono = /^[0-9]{8}$/;
 
   form = this.fb.group({
     nombreCompleto: ['', Validators.required],
     correo: ['', [Validators.required, Validators.email]],
-    telefono: [''],
+    telefono: ['', [Validators.pattern(this.patronTelefono)]],
     password: ['', [Validators.required, Validators.pattern(this.patronPassword)]],
     confirmarPassword: ['', Validators.required]
   });
@@ -27,6 +28,15 @@ export class RegistroComponent {
   registroExitoso = false;
 
   constructor(private fb: FormBuilder, private authService: AuthService) {}
+
+  /** Bloquea cualquier tecla que no sea un digito, mientras el usuario escribe. */
+  soloNumeros(event: KeyboardEvent): void {
+    const permitidas = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+    if (permitidas.includes(event.key)) return;
+    if (!/^[0-9]$/.test(event.key)) {
+      event.preventDefault();
+    }
+  }
 
   enviar(): void {
     if (this.form.invalid) return;

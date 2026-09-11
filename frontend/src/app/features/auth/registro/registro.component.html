@@ -3,39 +3,49 @@
     <h2>Crear Cuenta</h2>
 
     @if (registroExitoso) {
-      <p class="exito">
-        &#161;Cuenta creada! Revisa tu correo para verificarla antes de iniciar sesion.
-      </p>
-      <a routerLink="/login" class="boton">Ir a Iniciar Sesion</a>
+    <p class="exito">
+      &#161;Cuenta creada! Revisa tu correo para verificarla antes de iniciar sesion.
+    </p>
+    <a routerLink="/login" class="boton">Ir a Iniciar Sesion</a>
     } @else {
-      <form [formGroup]="form" (ngSubmit)="enviar()">
-        <label>Nombre Completo</label>
-        <input formControlName="nombreCompleto">
+    <form [formGroup]="form" (ngSubmit)="enviar()">
+      <label>Nombre Completo</label>
+      <input formControlName="nombreCompleto">
 
-        <label>Correo Electronico</label>
-        <input type="email" formControlName="correo">
+      <label>Correo Electronico</label>
+      <input type="email" formControlName="correo">
 
-        <label>Telefono (opcional)</label>
-        <input formControlName="telefono">
+      <label>Telefono (opcional)</label>
+      <input
+              formControlName="telefono"
+              type="tel"
+              inputmode="numeric"
+              maxlength="8"
+              (keydown)="soloNumeros($event)">
+      @if (form.get('telefono')?.invalid && form.get('telefono')?.touched) {
+      <small style="display:block; margin-top:-8px; margin-bottom:10px; color:#c0392b;">
+        El telefono debe contener solo numeros (8 digitos).
+      </small>
+      }
 
-        <label>Contrasena</label>
-        <input type="password" formControlName="password">
-        <small style="display:block; margin-top:-8px; margin-bottom:10px; color:#666;">
-          Minimo 8 caracteres, una mayuscula, un numero y un caracter especial.
-        </small>
+      <label>Contrasena</label>
+      <input type="password" formControlName="password">
+      <small style="display:block; margin-top:-8px; margin-bottom:10px; color:#666;">
+        Minimo 8 caracteres, una mayuscula, un numero y un caracter especial.
+      </small>
 
-        <label>Confirmar Contrasena</label>
-        <input type="password" formControlName="confirmarPassword">
+      <label>Confirmar Contrasena</label>
+      <input type="password" formControlName="confirmarPassword">
 
-        @if (errorMsg) { <p class="error">{{ errorMsg }}</p> }
+      @if (errorMsg) { <p class="error">{{ errorMsg }}</p> }
 
-        <button type="submit" [disabled]="form.invalid || cargando">
-          {{ cargando ? 'Creando cuenta...' : 'Registrarme' }}
-        </button>
-      </form>
-      <p style="margin-top:16px; font-size:13px;">
-        &#191;Ya tienes cuenta? <a routerLink="/login">Iniciar Sesion</a>
-      </p>
+      <button type="submit" [disabled]="form.invalid || cargando">
+        {{ cargando ? 'Creando cuenta...' : 'Registrarme' }}
+      </button>
+    </form>
+    <p style="margin-top:16px; font-size:13px;">
+      &#191;Ya tienes cuenta? <a routerLink="/login">Iniciar Sesion</a>
+    </p>
     }
   </div>
 </div>
