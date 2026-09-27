@@ -1,4 +1,4 @@
 export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:8080/api'
+  production: true,
+  apiUrl: 'https://quejas-quickbite-ddeccfbhh7djd0c0.centralus-01.azurewebsites.net/api'
 };
