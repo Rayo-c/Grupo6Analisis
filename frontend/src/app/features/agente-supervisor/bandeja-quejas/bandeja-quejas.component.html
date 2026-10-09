@@ -1,6 +1,6 @@
 <div class="contenedor">
   <div class="tarjeta">
-    <h2>Bandeja de Quejas</h2>
+    <h2>{{ titulo }}</h2>
 
     <form [formGroup]="filtros" (ngSubmit)="buscar()" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 0 16px;">
       <div>

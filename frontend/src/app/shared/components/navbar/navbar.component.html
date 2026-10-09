@@ -14,7 +14,7 @@
     }
 
     @if (authService.tieneRol('ROLE_AGENTE', 'ROLE_SUPERVISOR')) {
-      <a routerLink="/bandeja-quejas">Bandeja de Quejas</a>
+    <a routerLink="/bandeja-quejas">{{ authService.tieneRol('ROLE_AGENTE') ? 'Quejas Asignadas' : 'Gestion de Quejas' }}</a>
     }
 
     @if (authService.tieneRol('ROLE_SUPERVISOR', 'ROLE_ADMIN')) {

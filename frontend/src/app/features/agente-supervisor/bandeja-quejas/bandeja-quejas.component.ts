@@ -8,6 +8,7 @@ import { CategoriaService } from '../../../core/services/categoria.service';
 import { QuejaResponse } from '../../../core/models/queja.model';
 import { SucursalResponse } from '../../../core/models/sucursal.model';
 import { CategoriaResponse } from '../../../core/models/categoria.model';
+import { AuthService } from '../../../core/services/auth.service';
 
 /** CU08 - Administrar Quejas (vista Agente / Supervisor, con filtros). */
 @Component({
@@ -38,8 +39,14 @@ export class BandejaQuejasComponent implements OnInit {
     private fb: FormBuilder,
     private quejaService: QuejaService,
     private sucursalService: SucursalService,
-    private categoriaService: CategoriaService
+    private categoriaService: CategoriaService,
+    private authService: AuthService
   ) {}
+
+  /** CU01 paso 7: Agente -> "Quejas Asignadas"; Supervisor -> "Gestion de Quejas". */
+  get titulo(): string {
+    return this.authService.tieneRol('ROLE_AGENTE') ? 'Quejas Asignadas' : 'Gestion de Quejas';
+  }
 
   ngOnInit(): void {
     this.sucursalService.listar().subscribe((data) => (this.sucursales = data));
