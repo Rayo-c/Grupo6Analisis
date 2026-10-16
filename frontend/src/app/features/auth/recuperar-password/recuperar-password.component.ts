@@ -61,6 +61,12 @@ export class RecuperarPasswordComponent {
       error: (err) => {
         this.cargando = false;
         this.errorMsg = err.message;
+        // FA03 CU03: codigo expirado -> regresa al paso 1 (solicitar un nuevo codigo)
+        if (/expirado/i.test(err.message)) {
+          this.pasoActual = 'solicitar';
+          this.mensajeExito = '';
+          this.formReset.reset();
+        }
       }
     });
   }

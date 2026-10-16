@@ -71,9 +71,9 @@ public class SecurityConfig {
                         // CU09 (reasignacion manual): SUPERVISOR
                         .requestMatchers("/api/quejas/*/reasignar").hasAuthority("ROLE_SUPERVISOR")
 
-                        // CU11 Resolver, CU10 Seguimiento, CU12 Escalar: AGENTE y SUPERVISOR
+                        // CU11 Resolver, CU10 Seguimiento, CU12 Escalar: AGENTE, SUPERVISOR y ADMIN (Gerencia Regional recibe quejas escaladas)
                         .requestMatchers("/api/quejas/*/seguimiento", "/api/quejas/*/resolver", "/api/quejas/*/escalar")
-                            .hasAnyAuthority("ROLE_AGENTE", "ROLE_SUPERVISOR")
+                        .hasAnyAuthority("ROLE_AGENTE", "ROLE_SUPERVISOR", "ROLE_ADMIN")
 
                         .anyRequest().authenticated()
                 )

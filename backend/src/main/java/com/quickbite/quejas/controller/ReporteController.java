@@ -24,7 +24,8 @@ public class ReporteController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
             @RequestParam(required = false) Long sucursalId,
-            @RequestParam(required = false) Long categoriaId) {
-        return reporteService.generar(desde, hasta, sucursalId, categoriaId);
+            @RequestParam(required = false) Long categoriaId,
+            @RequestParam(required = false) String estado) {
+        return reporteService.generar(desde, hasta, sucursalId, categoriaId, estado);
     }
 }

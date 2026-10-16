@@ -13,11 +13,12 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class RegistroComponent {
   private readonly patronPassword = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+  private readonly patronTelefono = /^[0-9]{8}$/;
 
   form = this.fb.group({
     nombreCompleto: ['', Validators.required],
     correo: ['', [Validators.required, Validators.email]],
-    telefono: [''],
+    telefono: ['', [Validators.pattern(this.patronTelefono)]],
     password: ['', [Validators.required, Validators.pattern(this.patronPassword)]],
     confirmarPassword: ['', Validators.required]
   });
@@ -28,8 +29,39 @@ export class RegistroComponent {
 
   constructor(private fb: FormBuilder, private authService: AuthService) {}
 
+  /** Bloquea cualquier tecla que no sea un digito, mientras el usuario escribe. */
+  soloNumeros(event: KeyboardEvent): void {
+    const permitidas = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+    if (permitidas.includes(event.key)) return;
+    if (!/^[0-9]$/.test(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  /** CU02 FA04: el boton se deshabilita solo si la contrasena escrita no cumple los requisitos. */
+  get passwordInvalida(): boolean {
+    const c = this.form.get('password');
+    return !!c?.value && c.invalid;
+  }
+
+  /** CU02 FA02: campo obligatorio vacio (se muestra tras intentar registrar). */
+  vacio(campo: string): boolean {
+    const c = this.form.get(campo);
+    return !!c && c.touched && !c.value;
+  }
+
   enviar(): void {
-    if (this.form.invalid) return;
+    const obligatorios = ['nombreCompleto', 'correo', 'password', 'confirmarPassword'];
+    if (obligatorios.some((k) => !this.form.get(k)?.value)) {
+      this.form.markAllAsTouched();
+      this.errorMsg = 'El campo es obligatorio.'; // AN02 No.4
+      return;
+    }
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.errorMsg = this.form.get('correo')?.invalid ? 'El formato del correo electronico no es valido.' : ''; // AN02 No.5
+      return;
+    }
 
     const { password, confirmarPassword } = this.form.getRawValue();
     if (password !== confirmarPassword) {

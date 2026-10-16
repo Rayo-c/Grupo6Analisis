@@ -6,7 +6,6 @@ import com.quickbite.quejas.exception.BusinessException;
 import com.quickbite.quejas.model.EstadoQueja;
 import com.quickbite.quejas.service.ReporteService;
 import com.quickbite.quejas.model.Queja;
-import com.quickbite.quejas.model.Usuario;
 import com.quickbite.quejas.repository.QuejaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,7 +24,7 @@ public class ReporteServiceImpl implements ReporteService {
     private final QuejaRepository quejaRepository;
 
     @Override
-    public ReporteQuejasResponse generar(LocalDate desde, LocalDate hasta, Long sucursalId, Long categoriaId) {
+    public ReporteQuejasResponse generar(LocalDate desde, LocalDate hasta, Long sucursalId, Long categoriaId, String estado) {
         // FA02 CU15 - rango de fechas invalido
         if (desde != null && hasta != null && desde.isAfter(hasta)) {
             throw new BusinessException("El rango de fechas seleccionado para el reporte no es valido.");
@@ -36,6 +35,7 @@ public class ReporteServiceImpl implements ReporteService {
                 .filter(q -> hasta == null || !q.getFechaRegistro().toLocalDate().isAfter(hasta))
                 .filter(q -> sucursalId == null || q.getSucursal().getId().equals(sucursalId))
                 .filter(q -> categoriaId == null || q.getCategoria().getId().equals(categoriaId))
+                .filter(q -> estado == null || estado.isBlank() || q.getEstado().name().equals(estado))
                 .toList();
 
         // FA01 CU15 - sin resultados
@@ -60,18 +60,20 @@ public class ReporteServiceImpl implements ReporteService {
                 .mapToInt(c -> c.getCalificacion())
                 .average().orElse(0);
 
+        // Se agrupa por ID del agente (no por la entidad Usuario): Usuario/Sucursal usan @Data y su
+        // hashCode() se referencia mutuamente (usuario -> sucursal -> supervisor -> usuario), lo que
+        // provocaba StackOverflowError y el error 500 al generar el reporte.
         List<AgenteDesempenoResponse> desempeno = quejas.stream()
                 .filter(q -> q.getAgenteAsignado() != null)
-                .collect(Collectors.groupingBy(Queja::getAgenteAsignado))
-                .entrySet().stream()
-                .map(e -> {
-                    Usuario agente = e.getKey();
-                    List<Queja> deAgente = e.getValue();
+                .collect(Collectors.groupingBy(q -> q.getAgenteAsignado().getId()))
+                .values().stream()
+                .map(deAgente -> {
+                    String nombre = deAgente.get(0).getAgenteAsignado().getNombreCompleto();
                     double promedio = deAgente.stream()
                             .flatMap(q -> q.getCalificaciones().stream())
                             .mapToInt(c -> c.getCalificacion())
                             .average().orElse(0);
-                    return new AgenteDesempenoResponse(agente.getNombreCompleto(), deAgente.size(), promedio);
+                    return new AgenteDesempenoResponse(nombre, deAgente.size(), promedio);
                 })
                 .sorted(Comparator.comparing(AgenteDesempenoResponse::agenteNombre))
                 .toList();

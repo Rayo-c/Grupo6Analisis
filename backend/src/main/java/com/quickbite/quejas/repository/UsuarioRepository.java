@@ -22,4 +22,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long>, JpaSpec
 
     /** RN09 - agentes activos disponibles de una sucursal, para la asignacion aleatoria. */
     List<Usuario> findByRolAndEstadoAndSucursal(Rol rol, EstadoCuenta estado, Sucursal sucursal);
+
+    /** CU12 - responsable de Gerencia Regional (Administrador activo). */
+    List<Usuario> findByRolAndEstado(Rol rol, EstadoCuenta estado);
 }

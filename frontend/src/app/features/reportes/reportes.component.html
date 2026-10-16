@@ -1,7 +1,7 @@
 <div class="contenedor">
   <div class="tarjeta">
     <h2>Reportes de Quejas</h2>
-    <form [formGroup]="filtros" (ngSubmit)="generar()" style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 0 16px;">
+    <form [formGroup]="filtros" (ngSubmit)="generar()" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 0 16px;">
       <div><label>Desde</label><input type="date" formControlName="desde"></div>
       <div><label>Hasta</label><input type="date" formControlName="hasta"></div>
       <div>
@@ -18,6 +18,19 @@
           @for (c of categorias; track c.id) { <option [ngValue]="c.id">{{ c.nombre }}</option> }
         </select>
       </div>
+      <div>
+        <label>Estado</label>
+        <select formControlName="estado">
+          <option value="">Todos</option>
+          @for (e of estados; track e) { <option [value]="e">{{ e }}</option> }
+        </select>
+      </div>
+      <div>
+        <label>Tipo de Reporte</label>
+        <select formControlName="tipo">
+          @for (t of tipos; track t.valor) { <option [value]="t.valor">{{ t.etiqueta }}</option> }
+        </select>
+      </div>
       <div style="grid-column: 1 / -1;">
         <button type="submit" [disabled]="cargando">{{ cargando ? 'Generando...' : 'Generar Reporte' }}</button>
       </div>
@@ -26,49 +39,86 @@
 
   @if (errorMsg) { <div class="tarjeta"><p class="error">{{ errorMsg }}</p></div> }
 
+  <ng-template #grafica let-datos let-sufijo="sufijo">
+    @for (d of datos; track d.nombre) {
+    <div style="display:flex; align-items:center; gap:10px; margin:6px 0;">
+      <span style="width:190px; font-size:13px;">{{ d.nombre }}</span>
+      <div style="flex:1; background:#eee; border-radius:4px; height:18px;">
+        <div [style.width.%]="d.pct" [style.background]="d.color || '#003049'"
+             style="height:100%; border-radius:4px; min-width:2px;"></div>
+      </div>
+      <span style="width:90px; text-align:right; font-size:13px;">{{ d.valor | number:'1.0-1' }}{{ sufijo }}</span>
+    </div>
+    }
+  </ng-template>
+
   @if (reporte) {
-    <div class="tarjeta">
-      <h3>Resumen</h3>
-      <p><strong>Total de quejas:</strong> {{ reporte.totalQuejas }}</p>
-      <p><strong>Tiempo promedio de resolucion:</strong> {{ reporte.tiempoPromedioResolucionHoras | number:'1.1-1' }} horas</p>
-      <p><strong>Indice de satisfaccion promedio:</strong> {{ reporte.indiceSatisfaccionPromedio | number:'1.1-1' }} / 5</p>
-    </div>
+  <div class="tarjeta">
+    @if (mensajeExito) { <p class="exito">{{ mensajeExito }}</p> }
+    <button type="button" (click)="exportarPdf()" [disabled]="exportando">Exportar PDF</button>
+    <button type="button" class="secundario" (click)="exportarExcel()" [disabled]="exportando">Exportar Excel</button>
+  </div>
 
-    <div class="tarjeta">
-      <h3>Quejas por Categoria</h3>
-      @for (item of reporte.porCategoria | keyvalue; track item.key) {
-        <p>{{ item.key }}: {{ item.value }}</p>
+  <div class="tarjeta">
+    <h3>Resumen</h3>
+    <p><strong>Total de quejas:</strong> {{ reporte.totalQuejas }}</p>
+    <h4 style="margin-top:16px;">Quejas por Estado</h4>
+    <ng-container *ngTemplateOutlet="grafica; context: { $implicit: barrasEstado, sufijo: '' }"></ng-container>
+  </div>
+
+  @switch (tipoAplicado) {
+  @case ('CATEGORIA') {
+  <div class="tarjeta">
+    <h3>Quejas por Categoria</h3>
+    <ng-container *ngTemplateOutlet="grafica; context: { $implicit: barrasCategoria, sufijo: '' }"></ng-container>
+    <table style="margin-top:16px;">
+      <thead><tr><th>Categoria</th><th>Quejas</th></tr></thead>
+      <tbody>
+      @for (d of barrasCategoria; track d.nombre) { <tr><td>{{ d.nombre }}</td><td>{{ d.valor }}</td></tr> }
+      </tbody>
+    </table>
+  </div>
+  }
+  @case ('SUCURSAL') {
+  <div class="tarjeta">
+    <h3>Quejas por Sucursal</h3>
+    <ng-container *ngTemplateOutlet="grafica; context: { $implicit: barrasSucursal, sufijo: '' }"></ng-container>
+    <table style="margin-top:16px;">
+      <thead><tr><th>Sucursal</th><th>Quejas</th></tr></thead>
+      <tbody>
+      @for (d of barrasSucursal; track d.nombre) { <tr><td>{{ d.nombre }}</td><td>{{ d.valor }}</td></tr> }
+      </tbody>
+    </table>
+  </div>
+  }
+  @case ('TIEMPO') {
+  <div class="tarjeta">
+    <h3>Tiempo Promedio de Resolucion</h3>
+    <p style="font-size:28px; margin:8px 0;"><strong>{{ reporte.tiempoPromedioResolucionHoras | number:'1.1-1' }}</strong> horas</p>
+    <p style="color:#666; font-size:13px;">Comparado con el tiempo maximo de respuesta (SLA) de cada categoria.</p>
+    <ng-container *ngTemplateOutlet="grafica; context: { $implicit: barrasTiempo, sufijo: ' h' }"></ng-container>
+  </div>
+  }
+  @case ('SATISFACCION') {
+  <div class="tarjeta">
+    <h3>Indice de Satisfaccion</h3>
+    <p style="font-size:28px; margin:8px 0;"><strong>{{ reporte.indiceSatisfaccionPromedio | number:'1.1-1' }}</strong> / 5</p>
+    <p style="color:#666; font-size:13px;">Calificacion promedio por agente.</p>
+    <ng-container *ngTemplateOutlet="grafica; context: { $implicit: barrasAgentes, sufijo: ' / 5' }"></ng-container>
+    <table style="margin-top:16px;">
+      <thead><tr><th>Agente</th><th>Quejas Atendidas</th><th>Calificacion Promedio</th></tr></thead>
+      <tbody>
+      @for (a of reporte.desempenoPorAgente; track a.agenteNombre) {
+      <tr>
+        <td>{{ a.agenteNombre }}</td>
+        <td>{{ a.quejasAtendidas }}</td>
+        <td>{{ a.calificacionPromedio | number:'1.1-1' }} / 5</td>
+      </tr>
       }
-    </div>
-
-    <div class="tarjeta">
-      <h3>Quejas por Sucursal</h3>
-      @for (item of reporte.porSucursal | keyvalue; track item.key) {
-        <p>{{ item.key }}: {{ item.value }}</p>
-      }
-    </div>
-
-    <div class="tarjeta">
-      <h3>Quejas por Estado</h3>
-      @for (item of reporte.porEstado | keyvalue; track item.key) {
-        <p><span class="badge" [ngClass]="item.key">{{ item.key }}</span>: {{ item.value }}</p>
-      }
-    </div>
-
-    <div class="tarjeta">
-      <h3>Desempeno por Agente</h3>
-      <table>
-        <thead><tr><th>Agente</th><th>Quejas Atendidas</th><th>Calificacion Promedio</th></tr></thead>
-        <tbody>
-          @for (a of reporte.desempenoPorAgente; track a.agenteNombre) {
-            <tr>
-              <td>{{ a.agenteNombre }}</td>
-              <td>{{ a.quejasAtendidas }}</td>
-              <td>{{ a.calificacionPromedio | number:'1.1-1' }} / 5</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+      </tbody>
+    </table>
+  </div>
+  }
+  }
   }
 </div>

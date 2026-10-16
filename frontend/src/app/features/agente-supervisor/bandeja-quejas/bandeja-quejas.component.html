@@ -1,6 +1,13 @@
 <div class="contenedor">
   <div class="tarjeta">
-    <h2>Bandeja de Quejas</h2>
+    <h2>{{ titulo }}</h2>
+
+    @if (esSupervisor) {
+    <div style="display:flex; gap:10px; margin-bottom:16px;">
+      <button type="button" [class.secundario]="tab !== 'asignadas'" (click)="tab = 'asignadas'">Quejas Asignadas</button>
+      <button type="button" [class.secundario]="tab !== 'todas'" (click)="tab = 'todas'">Todas las Quejas</button>
+    </div>
+    }
 
     <form [formGroup]="filtros" (ngSubmit)="buscar()" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 0 16px;">
       <div>
@@ -46,30 +53,31 @@
   <div class="tarjeta">
     @if (cargando) { <p>Cargando...</p> }
     @if (errorMsg) { <p class="error">{{ errorMsg }}</p> }
-    @if (!cargando && quejas.length === 0 && !errorMsg) { <p>No existen registros.</p> }
+    @if (!cargando && quejasMostradas.length === 0 && !errorMsg) { <p>No existen registros.</p> }
 
-    @if (quejas.length > 0) {
-      <table>
-        <thead>
-          <tr>
-            <th>No. Seguimiento</th><th>Cliente</th><th>Sucursal</th><th>Categoria</th>
-            <th>Estado</th><th>Agente</th><th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (q of quejas; track q.id) {
-            <tr>
-              <td>{{ q.numeroSeguimiento }}</td>
-              <td>{{ q.clienteNombre }}</td>
-              <td>{{ q.sucursalNombre }}</td>
-              <td>{{ q.categoriaNombre }}</td>
-              <td><span class="badge" [ngClass]="q.estado">{{ q.estado }}</span></td>
-              <td>{{ q.agenteAsignadoNombre || '-' }}</td>
-              <td><a [routerLink]="['/quejas', q.id]">Ver Detalle</a></td>
-            </tr>
-          }
-        </tbody>
-      </table>
+    @if (quejasMostradas.length > 0) {
+    <table>
+      <thead>
+      <tr>
+        <th>No. Seguimiento</th><th>Cliente</th><th>Sucursal</th><th>Categoria</th>
+        <th>Fecha de Registro</th><th>Estado</th><th>Agente</th><th></th>
+      </tr>
+      </thead>
+      <tbody>
+      @for (q of quejasMostradas; track q.id) {
+      <tr>
+        <td>{{ q.numeroSeguimiento }}</td>
+        <td>{{ q.clienteNombre }}</td>
+        <td>{{ q.sucursalNombre }}</td>
+        <td>{{ q.categoriaNombre }}</td>
+        <td>{{ q.fechaRegistro | date:'dd/MM/yyyy HH:mm' }}</td>
+        <td><span class="badge" [ngClass]="q.estado">{{ q.estado }}</span></td>
+        <td>{{ q.agenteAsignadoNombre || '-' }}</td>
+        <td><a [routerLink]="['/quejas', q.id]">Ver Detalle</a></td>
+      </tr>
+      }
+      </tbody>
+    </table>
     }
   </div>
 </div>

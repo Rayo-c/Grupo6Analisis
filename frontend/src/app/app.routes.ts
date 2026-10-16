@@ -50,7 +50,7 @@ export const routes: Routes = [
   {
     path: 'bandeja-quejas',
     canActivate: [roleGuard],
-    data: { roles: ['ROLE_AGENTE', 'ROLE_SUPERVISOR'] },
+    data: { roles: ['ROLE_AGENTE', 'ROLE_SUPERVISOR', 'ROLE_ADMIN'] },
     loadComponent: () => import('./features/agente-supervisor/bandeja-quejas/bandeja-quejas.component').then(m => m.BandejaQuejasComponent)
   },
 

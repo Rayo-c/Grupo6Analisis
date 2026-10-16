@@ -40,15 +40,17 @@ export class DetalleQuejaComponent implements OnInit {
   });
   formReabrir = this.fb.group({ motivo: ['', Validators.required] });
   calificacionSeleccionada = 0;
+  errorCalificacion = '';
+  readonly diasLimiteReapertura = 5;
   comentarioCalificacion = '';
 
   private id!: number;
 
   constructor(
-    private route: ActivatedRoute,
-    private quejaService: QuejaService,
-    public authService: AuthService,
-    private fb: FormBuilder
+      private route: ActivatedRoute,
+      private quejaService: QuejaService,
+      public authService: AuthService,
+      private fb: FormBuilder
   ) {}
 
   ngOnInit(): void {
@@ -68,25 +70,50 @@ export class DetalleQuejaComponent implements OnInit {
 
   get esCliente(): boolean { return this.authService.tieneRol('ROLE_CLIENTE'); }
   get esAgenteOSupervisor(): boolean { return this.authService.tieneRol('ROLE_AGENTE', 'ROLE_SUPERVISOR'); }
+  /** Quien puede atender la queja: incluye al Administrador (Gerencia Regional) cuando la recibe escalada. */
+  get esResponsable(): boolean { return this.authService.tieneRol('ROLE_AGENTE', 'ROLE_SUPERVISOR', 'ROLE_ADMIN'); }
 
   get puedeDarSeguimiento(): boolean {
-    return this.esAgenteOSupervisor && !!this.queja &&
-      ['ASIGNADA', 'EN_PROCESO', 'REABIERTA'].includes(this.queja.estado);
+    return this.esResponsable && !!this.queja &&
+        ['ASIGNADA', 'EN_PROCESO', 'REABIERTA', 'ESCALADA'].includes(this.queja.estado);
   }
 
   get puedeResolver(): boolean {
-    return this.esAgenteOSupervisor && !!this.queja &&
-      ['ASIGNADA', 'EN_PROCESO', 'REABIERTA'].includes(this.queja.estado);
+    return this.esResponsable && !!this.queja &&
+        ['ASIGNADA', 'EN_PROCESO', 'REABIERTA', 'ESCALADA'].includes(this.queja.estado);
   }
 
   get puedeEscalar(): boolean {
     return this.esAgenteOSupervisor && !!this.queja &&
-      ['ASIGNADA', 'EN_PROCESO'].includes(this.queja.estado);
+        ['ASIGNADA', 'EN_PROCESO'].includes(this.queja.estado);
   }
 
   // CU13 - dentro del plazo (validado tambien en backend) y no reabierta antes
   get puedeReabrir(): boolean {
-    return this.esCliente && !!this.queja && this.queja.estado === 'RESUELTA' && this.queja.vecesReabierta === 0;
+    return this.esCliente && !!this.queja && this.queja.estado === 'RESUELTA'
+        && this.queja.vecesReabierta === 0 && !this.plazoReaperturaVencido;
+  }
+
+  get plazoReaperturaVencido(): boolean {
+    if (!this.queja?.fechaResolucion) return false;
+    const limite = new Date(this.queja.fechaResolucion).getTime() + this.diasLimiteReapertura * 86400000;
+    return Date.now() > limite;
+  }
+
+  /** CU13 RN05 / FA01: motivo por el que el boton "Reabrir Queja" no se habilita. */
+  get mensajeReapertura(): string {
+    if (!this.esCliente || !this.queja || this.queja.estado !== 'RESUELTA') return '';
+    if (this.queja.vecesReabierta >= 1) return 'Una queja unicamente puede reabrirse una vez.';
+    if (this.plazoReaperturaVencido) {
+      return `Solo se pueden reabrir quejas resueltas dentro de los ${this.diasLimiteReapertura} dias posteriores a su resolucion.`;
+    }
+    return '';
+  }
+
+  /** CU14 FA01: la resolucion actual ya tiene calificacion (AN02 No.14). */
+  get yaCalificada(): boolean {
+    return this.esCliente && !!this.queja && this.queja.estado === 'RESUELTA'
+        && this.queja.calificaciones.some(c => c.numeroResolucion === this.queja!.numeroResolucion);
   }
 
   // CU14 - RN08: una calificacion por resolucion actual
@@ -99,6 +126,20 @@ export class DetalleQuejaComponent implements OnInit {
     this.panelActivo = this.panelActivo === panel ? null : panel;
     this.mensajeExito = '';
     this.errorMsg = '';
+    this.errorCalificacion = '';
+  }
+
+  /** Flujo "Cancelar" de los formularios de accion (CU10-CU14). */
+  cancelarPanel(): void {
+    this.panelActivo = null;
+    this.errorMsg = '';
+    this.errorCalificacion = '';
+    this.formSeguimiento.reset();
+    this.formResolver.reset({ tipoResolucion: 'REEMBOLSO' });
+    this.formEscalar.reset({ nivel: 'SUPERVISOR' });
+    this.formReabrir.reset();
+    this.calificacionSeleccionada = 0;
+    this.comentarioCalificacion = '';
   }
 
   // -------- acciones --------
@@ -137,14 +178,15 @@ export class DetalleQuejaComponent implements OnInit {
 
   enviarCalificacion(): void {
     if (this.calificacionSeleccionada < 1) {
-      this.errorMsg = 'Debe seleccionar una calificacion.';
+      this.errorCalificacion = 'Debe seleccionar una calificacion.'; // CU14 paso 6
       return;
     }
+    this.errorCalificacion = '';
     this.quejaService.calificar(this.id, {
       calificacion: this.calificacionSeleccionada,
       comentario: this.comentarioCalificacion || undefined
     }).subscribe({
-      next: (data) => this.onExito(data, 'Gracias por tu opinion.'),
+      next: (data) => this.onExito(data, 'Calificación registrada exitosamente. ¡Gracias por su opinión!'),
       error: (err) => (this.errorMsg = err.message)
     });
   }

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -35,6 +36,7 @@ public class QuejaServiceImpl implements QuejaService {
     private final CalificacionQuejaRepository calificacionRepository;
     private final AsignacionService asignacionService;
     private final NotificacionService notificacionService;
+    private final UsuarioRepository usuarioRepository;
     private final SecureRandom random = new SecureRandom();
 
     @Value("${app.negocio.dias-limite-reapertura}")
@@ -51,6 +53,11 @@ public class QuejaServiceImpl implements QuejaService {
                 .orElseThrow(() -> new ResourceNotFoundException("No existen registros."));
         CategoriaQueja categoria = categoriaRepository.findById(request.categoriaId())
                 .orElseThrow(() -> new ResourceNotFoundException("No existen registros."));
+
+        // No se permiten quejas con fecha/hora de incidente en el futuro
+        if (request.fechaHoraIncidente().isAfter(LocalDateTime.now().plusMinutes(1))) {
+            throw new BusinessException("La fecha y hora del incidente no puede ser posterior a la fecha y hora actual.");
+        }
 
         // FA01 CU07 - registro como invitado si no hay cliente autenticado
         if (clienteAutenticado == null &&
@@ -87,7 +94,7 @@ public class QuejaServiceImpl implements QuejaService {
     // ---------------------------------------------------------------- CU08
     @Override
     public List<QuejaResponse> listar(String numeroSeguimiento, Long sucursalId, Long categoriaId,
-                                       String estado, LocalDate desde, LocalDate hasta, Usuario actor) {
+                                      String estado, LocalDate desde, LocalDate hasta, Usuario actor) {
 
         Specification<Queja> spec = Specification.where(null);
 
@@ -95,6 +102,9 @@ public class QuejaServiceImpl implements QuejaService {
             spec = spec.and((root, q, cb) -> cb.equal(root.get("agenteAsignado"), actor));
         } else if (actor.getRol() == Rol.ROLE_SUPERVISOR) {
             spec = spec.and((root, q, cb) -> cb.equal(root.get("sucursal"), actor.getSucursal()));
+        } else if (actor.getRol() == Rol.ROLE_ADMIN) {
+            // Gerencia Regional (Administrador): solo las quejas escaladas a su nivel
+            spec = spec.and((root, q, cb) -> cb.equal(root.get("agenteAsignado"), actor));
         }
         if (numeroSeguimiento != null && !numeroSeguimiento.isBlank()) {
             spec = spec.and((root, q, cb) -> cb.equal(root.get("numeroSeguimiento"), numeroSeguimiento));
@@ -112,7 +122,7 @@ public class QuejaServiceImpl implements QuejaService {
             spec = spec.and((root, q, cb) -> cb.greaterThanOrEqualTo(root.get("fechaRegistro"), desde.atStartOfDay()));
         }
         if (hasta != null) {
-            spec = spec.and((root, q, cb) -> cb.lessThanOrEqualTo(root.get("fechaRegistro"), hasta.atTime(23, 59, 59)));
+            spec = spec.and((root, q, cb) -> cb.lessThanOrEqualTo(root.get("fechaRegistro"), hasta.atTime(LocalTime.MAX)));
         }
 
         return quejaRepository.findAll(spec).stream().map(this::toResponse).toList();
@@ -163,7 +173,7 @@ public class QuejaServiceImpl implements QuejaService {
         validarAcceso(queja, actor);
 
         if (queja.getEstado() != EstadoQueja.ASIGNADA && queja.getEstado() != EstadoQueja.EN_PROCESO
-                && queja.getEstado() != EstadoQueja.REABIERTA) {
+                && queja.getEstado() != EstadoQueja.REABIERTA && queja.getEstado() != EstadoQueja.ESCALADA) {
             throw new BusinessException("La queja no se encuentra en un estado valido para resolver.");
         }
         if (request.solucion() == null || request.solucion().isBlank()) {
@@ -198,15 +208,22 @@ public class QuejaServiceImpl implements QuejaService {
             throw new BusinessException("El campo es obligatorio.");
         }
 
+        // RN05 / CU12 paso 8: se reasigna al nivel indicado (Supervisor de la sucursal o Gerencia Regional = Administrador)
+        Usuario nuevoResponsable = resolverResponsableEscalamiento(queja, request.nivel());
+
         queja.setEstado(EstadoQueja.ESCALADA);
         queja.setMotivoEscalamiento(request.motivo());
         queja.setNivelEscalamiento(request.nivel());
+        queja.setAgenteAsignado(nuevoResponsable);
+        queja.setFechaAsignacion(LocalDateTime.now());
         quejaRepository.save(queja);
 
+        notificacionService.enviar(nuevoResponsable.getCorreo(), TipoNotificacion.ALERTA_ESCALAMIENTO,
+                "La queja " + queja.getNumeroSeguimiento() + " fue escalada a tu nivel. Motivo: " + request.motivo(), queja.getId());
         Usuario supervisor = queja.getSucursal().getSupervisor();
-        if (supervisor != null) {
+        if (supervisor != null && !supervisor.getId().equals(nuevoResponsable.getId())) {
             notificacionService.enviar(supervisor.getCorreo(), TipoNotificacion.ALERTA_ESCALAMIENTO,
-                    "La queja " + queja.getNumeroSeguimiento() + " fue escalada. Motivo: " + request.motivo(), queja.getId());
+                    "La queja " + queja.getNumeroSeguimiento() + " fue escalada a Gerencia Regional. Motivo: " + request.motivo(), queja.getId());
         }
         notificacionService.enviar(queja.correoContacto(), TipoNotificacion.ALERTA_ESCALAMIENTO,
                 "Tu queja " + queja.getNumeroSeguimiento() + " fue escalada a un nivel superior de atencion.", queja.getId());
@@ -334,9 +351,13 @@ public class QuejaServiceImpl implements QuejaService {
                 q.setEstado(EstadoQueja.ESCALADA);
                 q.setMotivoEscalamiento("Escalamiento automatico por vencimiento del SLA de la categoria (" + slaHoras + "h).");
                 q.setNivelEscalamiento(NivelEscalamiento.SUPERVISOR);
+                Usuario supervisor = q.getSucursal().getSupervisor();
+                if (supervisor != null) {
+                    q.setAgenteAsignado(supervisor); // RN05 nivel 2: la recibe el Supervisor de Sucursal
+                    q.setFechaAsignacion(LocalDateTime.now());
+                }
                 quejaRepository.save(q);
 
-                Usuario supervisor = q.getSucursal().getSupervisor();
                 if (supervisor != null) {
                     notificacionService.enviar(supervisor.getCorreo(), TipoNotificacion.ALERTA_ESCALAMIENTO,
                             "La queja " + q.getNumeroSeguimiento() + " se escalo automaticamente por vencimiento de SLA.",
@@ -348,7 +369,25 @@ public class QuejaServiceImpl implements QuejaService {
 
     // ---------------------------------------------------------------- privados
 
+    /** CU12 paso 8: determina quien recibe la queja segun el nivel de escalamiento (RN05). */
+    private Usuario resolverResponsableEscalamiento(Queja queja, NivelEscalamiento nivel) {
+        if (nivel == NivelEscalamiento.GERENCIA_REGIONAL) {
+            return usuarioRepository.findByRolAndEstado(Rol.ROLE_ADMIN, EstadoCuenta.ACTIVO).stream()
+                    .min(java.util.Comparator.comparing(Usuario::getId))
+                    .orElseThrow(() -> new BusinessException("No hay un responsable disponible para el nivel de escalamiento seleccionado."));
+        }
+        Usuario supervisor = queja.getSucursal().getSupervisor();
+        if (supervisor == null || supervisor.getEstado() != EstadoCuenta.ACTIVO) {
+            throw new BusinessException("No hay un responsable disponible para el nivel de escalamiento seleccionado.");
+        }
+        return supervisor;
+    }
+
     private void validarAcceso(Queja queja, Usuario actor) {
+        if (actor.getRol() == Rol.ROLE_ADMIN
+                && (queja.getAgenteAsignado() == null || !queja.getAgenteAsignado().getId().equals(actor.getId()))) {
+            throw new BusinessException("El usuario no cuenta con permisos para realizar esta accion.");
+        }
         if (actor.getRol() == Rol.ROLE_AGENTE
                 && (queja.getAgenteAsignado() == null || !queja.getAgenteAsignado().getId().equals(actor.getId()))) {
             throw new BusinessException("El usuario no cuenta con permisos para realizar esta accion.");

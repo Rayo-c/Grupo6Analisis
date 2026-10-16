@@ -8,6 +8,7 @@ import { CategoriaService } from '../../../core/services/categoria.service';
 import { QuejaResponse } from '../../../core/models/queja.model';
 import { SucursalResponse } from '../../../core/models/sucursal.model';
 import { CategoriaResponse } from '../../../core/models/categoria.model';
+import { AuthService } from '../../../core/services/auth.service';
 
 /** CU08 - Administrar Quejas (vista Agente / Supervisor, con filtros). */
 @Component({
@@ -21,6 +22,7 @@ export class BandejaQuejasComponent implements OnInit {
   sucursales: SucursalResponse[] = [];
   categorias: CategoriaResponse[] = [];
   cargando = true;
+  tab: 'asignadas' | 'todas' = 'todas';
   errorMsg = '';
 
   readonly estados = ['REGISTRADA', 'ASIGNADA', 'EN_PROCESO', 'ESCALADA', 'RESUELTA', 'CERRADA', 'REABIERTA'];
@@ -35,11 +37,30 @@ export class BandejaQuejasComponent implements OnInit {
   });
 
   constructor(
-    private fb: FormBuilder,
-    private quejaService: QuejaService,
-    private sucursalService: SucursalService,
-    private categoriaService: CategoriaService
+      private fb: FormBuilder,
+      private quejaService: QuejaService,
+      private sucursalService: SucursalService,
+      private categoriaService: CategoriaService,
+      private authService: AuthService
   ) {}
+
+  /** CU01 paso 7: Agente -> "Quejas Asignadas"; Supervisor -> "Gestion de Quejas". */
+  get titulo(): string {
+    if (this.authService.tieneRol('ROLE_AGENTE')) return 'Quejas Asignadas';
+    return this.authService.tieneRol('ROLE_ADMIN') ? 'Quejas Escaladas' : 'Gestion de Quejas';
+  }
+
+  /** CU08 paso 2: la pestana "Todas las Quejas" es exclusiva del Supervisor. */
+  get esSupervisor(): boolean {
+    return this.authService.tieneRol('ROLE_SUPERVISOR');
+  }
+
+  /** "Quejas Asignadas" (supervisor) = quejas cuyo agente asignado es el usuario autenticado. */
+  get quejasMostradas(): QuejaResponse[] {
+    if (!this.esSupervisor || this.tab === 'todas') return this.quejas;
+    const nombre = this.authService.usuario()?.nombreCompleto;
+    return this.quejas.filter((q) => q.agenteAsignadoNombre === nombre);
+  }
 
   ngOnInit(): void {
     this.sucursalService.listar().subscribe((data) => (this.sucursales = data));
@@ -52,7 +73,7 @@ export class BandejaQuejasComponent implements OnInit {
     this.errorMsg = '';
     const valores = this.filtros.getRawValue();
     const filtrosLimpios = Object.fromEntries(
-      Object.entries(valores).filter(([, v]) => v !== null && v !== '')
+        Object.entries(valores).filter(([, v]) => v !== null && v !== '')
     );
 
     this.quejaService.listar(filtrosLimpios).subscribe({
