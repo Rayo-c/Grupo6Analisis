@@ -1,4 +1,4 @@
-# Backend - Sistema de Gestion de Quejas (QuickBite)
+xº# Backend - Sistema de Gestion de Quejas (QuickBite)
 
 Spring Boot 3 / Java 17 / PostgreSQL / JWT. Implementa los casos de uso **CU00 a CU16**.
 
