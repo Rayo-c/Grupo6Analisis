@@ -46,7 +46,12 @@ export async function exportarReporteExcel(r: ReporteQuejasResponse, filtros: st
 
 export async function exportarReportePdf(r: ReporteQuejasResponse, filtros: string): Promise<void> {
     const { jsPDF } = await import('jspdf');
-    const autoTable = (await import('jspdf-autotable')).default;
+    // jspdf-autotable es un modulo CommonJS/UMD: segun el empaquetador, la funcion llega en
+    // `default`, en `default.default` o en `autoTable`. Se resuelve de forma segura.
+    const modAutoTable: any = await import('jspdf-autotable');
+    const autoTable: (doc: any, opciones: any) => void =
+        typeof modAutoTable.default === 'function' ? modAutoTable.default
+            : (modAutoTable.default?.default ?? modAutoTable.autoTable);
 
     const doc = new jsPDF();
     doc.setFontSize(16);
