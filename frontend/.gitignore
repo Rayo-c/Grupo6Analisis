@@ -3,3 +3,5 @@ dist/
 .angular/
 .vscode/
 *.log
+.idea/
+*.iml

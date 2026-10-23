@@ -6,3 +6,5 @@ target/
 .vscode/
 application-local.properties
 .env
+.idea/
+*.iml
